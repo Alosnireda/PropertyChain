@@ -1,11 +1,11 @@
 (define-data-var property-owner principal tx-sender)
 (define-data-var potential-buyer (optional principal) none)
-(define-data-var property-cost uint 0)
+(define-data-var property-cost uint u0)
 (define-data-var transaction-complete bool false)
-(define-data-var property-asset-id uint 0)
-(define-data-var listing-expiration uint 0)
+(define-data-var property-asset-id uint u0)
+(define-data-var listing-expiration uint u0)
 (define-data-var multi-signature-approvers (list 3 principal) (list))
-(define-data-var approvers-count uint 0)
+(define-data-var approvers-count uint u0)
 
 ;; Define an NFT to represent the property asset
 (define-non-fungible-token real-estate-nft uint)
@@ -16,7 +16,7 @@
 
 ;; 1. Function to get the current block height
 (define-read-only (get-current-block-height)
-  (ok (get-block-info? height)))
+  (ok (get-block-info? height u0)))
 
 ;; 2. Helper function to check if a principal is equal to another
 (define-read-only (is-eq-principal (p1 principal) (p2 principal))
@@ -24,7 +24,7 @@
 
 ;; 3. Function to check if a principal is in the list of approvers
 (define-read-only (is-in-list (approver principal) (approvers (list 3 principal)))
-  (ok (not (is-eq (len (filter (is-eq-principal approver) approvers)) u0))))
+  (ok (> (len (filter is-eq-principal approver approvers)) u0)))
 
 ;; 4. Function to list a property with a given cost, asset ID, and listing duration
 (define-public (register-property (cost uint) (asset-id uint) (duration uint))
@@ -149,7 +149,7 @@
     (asserts! (is-eq (var-get property-owner) tx-sender) (err u119))
     (var-set transaction-complete false)
     (var-set potential-buyer none)
-    (var-set approvers-count 0)
+    (var-set approvers-count u0)
     (ok "Transaction reset successfully")
   )
 )
