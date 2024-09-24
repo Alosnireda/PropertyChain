@@ -20,9 +20,7 @@
 
 ;; 2. Function to check if a principal is in the list of approvers
 (define-read-only (is-in-list (approver principal) (approvers (list 3 principal)))
-  (ok (if (any (map (lambda (x) (is-eq x approver)) approvers))
-          true
-          false)))
+  (ok (not (is-eq (len (filter (lambda (x) (is-eq x approver)) approvers)) u0))))
 
 ;; 3. Function to list a property with a given cost, asset ID, and listing duration
 (define-public (register-property (cost uint) (asset-id uint) (duration uint))
