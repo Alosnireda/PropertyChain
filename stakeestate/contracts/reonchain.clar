@@ -14,36 +14,44 @@
 (define-trait asset-transfer-trait
   ((transfer (uint principal principal) (response bool uint))))
 
-;; 1. Function to list a property with a given cost, asset ID, and listing duration
+;; 1. Function to get the current block height
+(define-read-only (get-current-block-height)
+  (ok (get-block-info? height)))
+
+;; 2. Function to list a property with a given cost, asset ID, and listing duration
 (define-public (register-property (cost uint) (asset-id uint) (duration uint))
-  (begin
-    (asserts! (is-eq (var-get property-owner) tx-sender) (err u100))
-    (asserts! (is-eq (var-get transaction-complete) false) (err u101))
-    (var-set property-cost cost)
-    (var-set property-asset-id asset-id)
-    ;; Set the listing expiration date (current block height + duration)
-    (var-set listing-expiration (+ (block-height) duration))
-    (print (list "Property registered successfully" 
-                 (var-get property-owner) 
-                 (var-get property-cost) 
-                 (var-get property-asset-id) 
-                 (var-get listing-expiration)))
-    (ok "Property registered successfully")
+  (let ((current-block-height (unwrap! (get-current-block-height) (err u120))))
+    (begin
+      (asserts! (is-eq (var-get property-owner) tx-sender) (err u100))
+      (asserts! (is-eq (var-get transaction-complete) false) (err u101))
+      (var-set property-cost cost)
+      (var-set property-asset-id asset-id)
+      ;; Set the listing expiration date (current block height + duration)
+      (var-set listing-expiration (+ current-block-height duration))
+      (print (list "Property registered successfully" 
+                   (var-get property-owner) 
+                   (var-get property-cost) 
+                   (var-get property-asset-id) 
+                   (var-get listing-expiration)))
+      (ok "Property registered successfully")
+    )
   )
 )
 
-;; 2. Function to express interest in buying the property
+;; 3. Function to express interest in buying the property
 (define-public (submit-offer)
-  (begin
-    (asserts! (is-none (var-get potential-buyer)) (err u102))
-    (asserts! (is-eq (var-get transaction-complete) false) (err u103))
-    (asserts! (> (var-get listing-expiration) (block-height)) (err u110)) ;; Check listing is still active
-    (var-set potential-buyer (some tx-sender))
-    (ok "Offer submitted successfully")
+  (let ((current-block-height (unwrap! (get-current-block-height) (err u120))))
+    (begin
+      (asserts! (is-none (var-get potential-buyer)) (err u102))
+      (asserts! (is-eq (var-get transaction-complete) false) (err u103))
+      (asserts! (> (var-get listing-expiration) current-block-height) (err u110)) ;; Check listing is still active
+      (var-set potential-buyer (some tx-sender))
+      (ok "Offer submitted successfully")
+    )
   )
 )
 
-;; 3. Function to add a multi-signature approver
+;; 4. Function to add a multi-signature approver
 (define-public (add-approver (approver principal))
   (begin
     (asserts! (is-eq (var-get property-owner) tx-sender) (err u111))
@@ -54,7 +62,7 @@
   )
 )
 
-;; 4. Function to approve the transaction
+;; 5. Function to approve the transaction
 (define-public (approve-transaction)
   (begin
     (asserts! (is-eq (var-get transaction-complete) false) (err u106))
@@ -64,7 +72,7 @@
   )
 )
 
-;; 5. Function to complete the sale and transfer the property with multi-signature approval
+;; 6. Function to complete the sale and transfer the property with multi-signature approval
 (define-public (complete-transaction)
   (let ((buyer (unwrap! (var-get potential-buyer) (err u104)))
         (cost (var-get property-cost))
@@ -90,7 +98,7 @@
   )
 )
 
-;; 6. Function to withdraw the offer and reset the potential buyer
+;; 7. Function to withdraw the offer and reset the potential buyer
 (define-public (withdraw-offer)
   (let ((buyer (unwrap! (var-get potential-buyer) (err u107))))
     (asserts! (is-eq tx-sender buyer) (err u108))
@@ -100,7 +108,7 @@
   )
 )
 
-;; 7. Function to update the property cost
+;; 8. Function to update the property cost
 (define-public (update-property-cost (new-cost uint))
   (begin
     (asserts! (is-eq (var-get property-owner) tx-sender) (err u115))
@@ -110,20 +118,22 @@
   )
 )
 
-;; 8. Function to cancel the listing if expired
+;; 9. Function to cancel the listing if expired
 (define-public (cancel-listing-if-expired)
-  (begin
-    (asserts! (is-eq (var-get transaction-complete) false) (err u117))
-    (asserts! (>= (block-height) (var-get listing-expiration)) (err u118))
-    (var-set potential-buyer none)
-    (var-set property-cost 0)
-    (var-set property-asset-id 0)
-    (var-set listing-expiration 0)
-    (ok "Listing cancelled due to expiration")
+  (let ((current-block-height (unwrap! (get-current-block-height) (err u120))))
+    (begin
+      (asserts! (is-eq (var-get transaction-complete) false) (err u117))
+      (asserts! (>= current-block-height (var-get listing-expiration)) (err u118))
+      (var-set potential-buyer none)
+      (var-set property-cost 0)
+      (var-set property-asset-id 0)
+      (var-set listing-expiration 0)
+      (ok "Listing cancelled due to expiration")
+    )
   )
 )
 
-;; 9. Function to resolve disputes by resetting the transaction
+;; 10. Function to resolve disputes by resetting the transaction
 (define-public (reset-transaction)
   (begin
     (asserts! (is-eq (var-get property-owner) tx-sender) (err u119))
