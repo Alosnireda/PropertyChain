@@ -14,22 +14,6 @@
 (define-trait asset-transfer-trait
   ((transfer (uint principal principal) (response bool uint))))
 
-;; Event to log property listing
-(define-event property-listed
-  (property-owner principal)
-  (property-cost uint)
-  (property-asset-id uint)
-  (listing-expiration uint)
-)
-
-;; Event to log successful transactions
-(define-event transaction-completed
-  (property-owner principal)
-  (buyer principal)
-  (property-cost uint)
-  (property-asset-id uint)
-)
-
 ;; 1. Function to list a property with a given cost, asset ID, and listing duration
 (define-public (register-property (cost uint) (asset-id uint) (duration uint))
   (begin
@@ -39,8 +23,11 @@
     (var-set property-asset-id asset-id)
     ;; Set the listing expiration date (current block height + duration)
     (var-set listing-expiration (+ (block-height) duration))
-    (print (list "Property registered successfully" (var-get property-owner) (var-get property-cost) (var-get property-asset-id) (var-get listing-expiration)))
-    (emit-event (property-listed (var-get property-owner) (var-get property-cost) (var-get property-asset-id) (var-get listing-expiration)))
+    (print (list "Property registered successfully" 
+                 (var-get property-owner) 
+                 (var-get property-cost) 
+                 (var-get property-asset-id) 
+                 (var-get listing-expiration)))
     (ok "Property registered successfully")
   )
 )
@@ -93,7 +80,11 @@
       (try! (stx-transfer? cost buyer (var-get property-owner)))
       ;; Mark transaction as complete
       (var-set transaction-complete true)
-      (emit-event (transaction-completed (var-get property-owner) buyer cost asset-id))
+      (print (list "Transaction completed" 
+                   (var-get property-owner) 
+                   buyer 
+                   cost 
+                   asset-id))
       (ok "Transaction completed successfully")
     )
   )
