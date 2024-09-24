@@ -18,7 +18,13 @@
 (define-read-only (get-current-block-height)
   (ok (get-block-info? height)))
 
-;; 2. Function to list a property with a given cost, asset ID, and listing duration
+;; 2. Function to check if a principal is in the list of approvers
+(define-read-only (is-in-list (approver principal) (approvers (list 3 principal)))
+  (ok (if (any (map (lambda (x) (is-eq x approver)) approvers))
+          true
+          false)))
+
+;; 3. Function to list a property with a given cost, asset ID, and listing duration
 (define-public (register-property (cost uint) (asset-id uint) (duration uint))
   (let ((current-block-height (unwrap! (get-current-block-height) (err u120))))
     (begin
@@ -38,7 +44,7 @@
   )
 )
 
-;; 3. Function to express interest in buying the property
+;; 4. Function to express interest in buying the property
 (define-public (submit-offer)
   (let ((current-block-height (unwrap! (get-current-block-height) (err u120))))
     (begin
@@ -51,7 +57,7 @@
   )
 )
 
-;; 4. Function to add a multi-signature approver
+;; 5. Function to add a multi-signature approver
 (define-public (add-approver (approver principal))
   (begin
     (asserts! (is-eq (var-get property-owner) tx-sender) (err u111))
@@ -62,17 +68,19 @@
   )
 )
 
-;; 5. Function to approve the transaction
+;; 6. Function to approve the transaction
 (define-public (approve-transaction)
-  (begin
-    (asserts! (is-eq (var-get transaction-complete) false) (err u106))
-    (asserts! (contains (var-get multi-signature-approvers) tx-sender) (err u113))
-    (var-set approvers-count (+ (var-get approvers-count) u1))
-    (ok "Transaction approved")
+  (let ((is-approved (unwrap! (is-in-list tx-sender (var-get multi-signature-approvers)) (err u113))))
+    (begin
+      (asserts! (is-eq (var-get transaction-complete) false) (err u106))
+      (asserts! is-approved (err u113)) ;; Check if the sender is in the list of approvers
+      (var-set approvers-count (+ (var-get approvers-count) u1))
+      (ok "Transaction approved")
+    )
   )
 )
 
-;; 6. Function to complete the sale and transfer the property with multi-signature approval
+;; 7. Function to complete the sale and transfer the property with multi-signature approval
 (define-public (complete-transaction)
   (let ((buyer (unwrap! (var-get potential-buyer) (err u104)))
         (cost (var-get property-cost))
@@ -98,7 +106,7 @@
   )
 )
 
-;; 7. Function to withdraw the offer and reset the potential buyer
+;; 8. Function to withdraw the offer and reset the potential buyer
 (define-public (withdraw-offer)
   (let ((buyer (unwrap! (var-get potential-buyer) (err u107))))
     (asserts! (is-eq tx-sender buyer) (err u108))
@@ -108,7 +116,7 @@
   )
 )
 
-;; 8. Function to update the property cost
+;; 9. Function to update the property cost
 (define-public (update-property-cost (new-cost uint))
   (begin
     (asserts! (is-eq (var-get property-owner) tx-sender) (err u115))
@@ -118,7 +126,7 @@
   )
 )
 
-;; 9. Function to cancel the listing if expired
+;; 10. Function to cancel the listing if expired
 (define-public (cancel-listing-if-expired)
   (let ((current-block-height (unwrap! (get-current-block-height) (err u120))))
     (begin
@@ -133,7 +141,7 @@
   )
 )
 
-;; 10. Function to resolve disputes by resetting the transaction
+;; 11. Function to resolve disputes by resetting the transaction
 (define-public (reset-transaction)
   (begin
     (asserts! (is-eq (var-get property-owner) tx-sender) (err u119))
